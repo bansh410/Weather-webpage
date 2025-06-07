@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Weather Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(to right, #00c6ff, #0072ff);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+      width: 100%;
+      max-width: 650px;
+      animation: fadeIn 0.6s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      text-align: center;
+      color: #004e89;
+      margin-bottom: 25px;
+      font-size: 2rem;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 18px;
+      border: 2px solid #0072ff;
+      border-radius: 10px;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #004e89;
+    }
+
+    button {
+      background-color: #0072ff;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+    }
+
+    button:hover {
+      background-color: #005ecb;
+      transform: translateY(-1px);
+    }
+
+    .weather-section {
+      margin-top: 20px;
+    }
+
+    .current-weather {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .current-weather img {
+      width: 100px;
+    }
+
+    .current-weather h2 {
+      margin: 10px 0 5px;
+      color: #004e89;
+    }
+
+    .current-weather p {
+      margin: 4px 0;
+      font-size: 16px;
+    }
+
+    .forecast-container {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .forecast-day {
+      flex: 1 1 calc(20% - 10px);
+      background: #f0f8ff;
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      transition: transform 0.2s, background-color 0.3s;
+    }
+
+    .forecast-day:hover {
+      transform: translateY(-3px);
+      background-color: #e1f3ff;
+    }
+
+    .forecast-day h4 {
+      margin: 5px 0;
+      color: #0072ff;
+      font-size: 14px;
+    }
+
+    .forecast-day img {
+      width: 50px;
+      height: 50px;
+    }
+
+    .forecast-day p {
+      margin: 4px 0;
+      font-size: 14px;
+    }
+
+    .error {
+      color: red;
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+      .forecast-day {
+        flex: 1 1 45%;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Weather Dashboard</h1>
+    <form id="weather-form">
+      <input type="text" id="location" placeholder="Enter city or ZIP code" required />
+      <button type="submit">Get Weather</button>
+    </form>
+    <div id="error-message" class="error"></div>
+    <div class="weather-section" id="weather-output"></div>
+  </div>
+
+  <script>
+    const form = document.getElementById("weather-form");
+    const locationInput = document.getElementById("location");
+    const weatherOutput = document.getElementById("weather-output");
+    const errorMessage = document.getElementById("error-message");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const location = locationInput.value.trim();
+      if (!location) return;
+
+      errorMessage.textContent = "";
+      weatherOutput.innerHTML = "<p>Loading...</p>";
+
+      try {
+        const response = await fetch(`/api/weather?location=${encodeURIComponent(location)}`);
+        const data = await response.json();
+
+        if (response.ok) {
+          displayWeather(data.current, data.forecast);
+        } else {
+          throw new Error(data.error || "Weather not found");
+        }
+      } catch (err) {
+        weatherOutput.innerHTML = "";
+        errorMessage.textContent = err.message;
+      }
+    });
+
+    function displayWeather(current, forecast) {
+      const currentHTML = `
+        <div class="current-weather">
+          <h2>${current.name}, ${current.sys.country}</h2>
+          <img src="https://openweathermap.org/img/wn/${current.weather[0].icon}@2x.png" alt="">
+          <p><strong>${current.weather[0].description}</strong></p>
+          <p>🌡️ ${current.main.temp.toFixed(1)}°C</p>
+          <p>💧 Humidity: ${current.main.humidity}%</p>
+          <p>🌬️ Wind: ${current.wind.speed} m/s</p>
+        </div>
+      `;
+
+      const forecastHTML = buildForecast(forecast.list);
+      weatherOutput.innerHTML = currentHTML + forecastHTML;
+    }
+
+    function buildForecast(forecastList) {
+      const daily = {};
+      forecastList.forEach(item => {
+        if (item.dt_txt.includes("12:00:00")) {
+          const date = new Date(item.dt * 1000);
+          const day = date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+          daily[day] = item;
+        }
+      });
+
+      let html = `<div class="forecast-container">`;
+      for (const [day, data] of Object.entries(daily).slice(0, 5)) {
+        html += `
+          <div class="forecast-day">
+            <h4>${day}</h4>
+            <img src="https://openweathermap.org/img/wn/${data.weather[0].icon}.png" alt="">
+            <p>${data.weather[0].description}</p>
+            <p>${data.main.temp.toFixed(1)}°C</p>
+            <p>💧${data.main.humidity}%</p>
+          </div>
+        `;
+      }
+      html += `</div>`;
+      return html;
+    }
+  </script>
+</body>
+</html>
